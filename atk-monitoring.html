@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Monitoring ATK Kota Bogor</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
+<style>
+body {
+  font-family: Arial;
+  background:#f5f7fb;
+  margin:0;
+}
+
+.header {
+  background: linear-gradient(90deg,#1e3c72,#2a5298);
+  color:white;
+  padding:20px;
+}
+
+.container {
+  padding:20px;
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap:20px;
+  margin-bottom:20px;
+}
+
+.grid-4 {
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:20px;
+  margin-bottom:30px;
+}
+
+.card {
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow:0 8px 20px rgba(0,0,0,0.1);
+}
+
+.card h4 { 
+  margin:0;
+  font-size:13px;
+  color:#6b7280;
+  font-weight:500; 
+}
+
+.card h2 { 
+  font-size:28px;
+  font-weight:700;
+  margin-top:10px;
+ }
+
+.charts {
+  margin-top: 10px;
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap:20px;
+}
+
+.gappd {
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  margin-top: 30px;
+}
+
+.gappd:hover {
+  transform: translateY(-3px);
+  box-shadow:0 8px 20px rgba(0,0,0,0.1);
+}
+
+canvas {
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  width:100% !important;
+  max-width:100%;
+  height:320px !important;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+#status {
+  max-width: 320px;
+  margin: auto;
+}
+
+#topgap {
+  max-width: 600px;
+  margin: auto;
+}
+
+td, th {
+  padding:10px;
+  text-align:left;
+}
+
+th {
+  background:#f1f5f9;
+  cursor: pointer;
+  user-select: none;
+}
+
+tr:hover {
+  background:#f9fafb;
+}
+
+.table-custom {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0;
+}
+
+.table-custom th,
+.table-custom td {
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb; /* soft line */
+}
+
+.table-custom th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.table-custom tr:last-child td {
+  border-bottom: none;
+}
+
+.table-custom thead {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: white;
+}
+
+.table-custom thead th {
+  position: sticky;
+  top: 0;
+  background: #ffffff; /* FULL SOLID */
+  z-index: 20; /* NAiKIN JAUH */
+
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.table-custom tbody tr {
+  position: relative;
+  z-index: 1;
+}
+
+.modal-header {
+  flex: 0 0 auto;
+  padding:15px 20px;
+  background:white;
+  z-index:10;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  margin-bottom: 10px;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  backdrop-filter: blur(6px);
+
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.modal-body {
+  flex:1;
+  overflow:auto; /* SCROLL PINDAH KE SINI */
+  background: white;
+  border-radius: 0 0 16px 16px;
+}
+
+#modalContent {
+  background: white;
+  margin:5% auto;
+  width:80%;
+  max-height:80%;
+  border-radius:16px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden; /* penting */
+}
+
+/* ================= MONITORING PAKET ================= */
+
+.monitoring-paket-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.monitoring-paket-title{
+  margin:0;
+  font-size:24px;
+  color:#111827;
+}
+
+.monitoring-paket-tools{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.monitoring-select,
+.monitoring-search{
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid #d1d5db;
+  outline:none;
+  font-size:14px;
+}
+
+.monitoring-search{
+  min-width:240px;
+}
+
+.monitoring-summary{
+  margin-bottom:15px;
+  font-size:14px;
+  color:#6b7280;
+}
+
+.monitoring-table-wrapper{
+  overflow:auto;
+  max-height:500px;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+}
+
+.status-badge{
+  color:white;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:bold;
+}
+
+.status-sudah{
+  background:#22c55e;
+}
+
+.status-belum{
+  background:#ef4444;
+}
+
+.row-belum{
+  background:#fef2f2;
+}
+
+.row-sudah{
+  background:#f0fdf4;
+}
+
+
+.close-btn {
+  font-size: 20px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>Monitoring ATK Konsolidasi Kota Bogor</h2>
+</div>
+
+<div class="container">
+
+<div style="padding:20px;">
+ <label>Pilih Perangkat Daerah:</label>
+   <select id="filterPD" style="padding:6px; border-radius:6px;">
+   <option value="ALL">Pemerintah Kota Bogor</option>
+  </select>
+</div>
+
+<!-- KPI ATAS -->
+<div class="grid">
+  <div class="card"><h4>Total Paket ATK SIRUP</h4><h2 id="sirup"></h2></div>
+  <div class="card"><h4>Total Paket ATK eKatalog</h4><h2 id="ekatalog"></h2></div>
+  <div class="card"><h4>Pagu ATK SIRUP</h4><h2 id="pagu"></h2></div>
+</div>
+
+<!-- KPI BAWAH -->
+<div class="grid-4">
+  <div class="card" onclick="showAllTransaksi(ACTIVE_EKATALOG)"><h4>Total Transaksi ATK</h4><h2 id="trx"></h2></div>
+  <div class="card"><h4>Total Realisasi</h4><h2 id="realisasi"></h2></div>
+  <div class="card" onclick="showByStatus('ON_PROCESS', ACTIVE_EKATALOG)"><h4>On Process</h4><h2 id="onprocess"></h2></div>
+  <div class="card" onclick="showByStatus('COMPLETED', ACTIVE_EKATALOG)"><h4>Selesai</h4><h2 id="selesai"></h2></div>
+</div>
+
+<!-- CHART -->
+<div class="charts">
+  <canvas id="progress"></canvas>
+  <canvas id="status"></canvas>
+  <canvas id="penyedia"></canvas>
+</div>
+
+<!-- GAP PD -->
+<div class="gappd">
+  <canvas id="topgap"></canvas>
+</div>
+
+<!-- MONITORING PAKET -->
+<div class="gappd">
+
+  <div class="monitoring-paket-header">
+
+    <h2 class="monitoring-paket-title">
+      Monitoring Paket Konsolidasi ATK
+    </h2>
+
+    <div class="monitoring-paket-tools">
+
+      <select id="filterStatusPaket" class="monitoring-select">
+        <option value="BELUM">Belum Bertransaksi</option>
+        <option value="SUDAH">Sudah Bertransaksi</option>
+        <option value="ALL">Semua Status</option>
+      </select>
+
+      <input
+        type="text"
+        id="searchPaket"
+        class="monitoring-search"
+        placeholder="Cari paket / PD..."
+      >
+
+    </div>
+
+  </div>
+
+  <div id="summaryPaket" class="monitoring-summary"></div>
+
+  <div class="monitoring-table-wrapper">
+
+    <table class="table-custom">
+
+      <thead>
+        <tr>
+            <th onclick="sortMonitoring('kd_rup')">Kode RUP</th>
+
+            <th onclick="sortMonitoring('pd')">Perangkat Daerah</th>
+
+            <th onclick="sortMonitoring('nama_paket')">Nama Paket</th>
+
+            <th onclick="sortMonitoring('pagu')">Pagu</th>
+
+            <th onclick="sortMonitoring('realisasi')">Realisasi</th>
+
+            <th onclick="sortMonitoring('status')">Status</th>
+
+            <th onclick="sortMonitoring('tanggal_awal_kontrak')">
+              Rencana Tanggal Kontrak
+            </th>
+        </tr>
+      </thead>
+
+      <tbody id="paketBody"></tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+</div>
+
+<script>
+
+const URL = "https://docs.google.com/spreadsheets/d/1uy1p8KnlvR6Cu3-iIBlLCzw5M2MiwXKwnmTwQw-hGEk/gviz/tq?tqx=out:json&gid=623389342";
+
+function formatRupiah(n){
+  return "Rp" + Number(n).toLocaleString("id-ID");
+}
+
+function formatTanggalGoogle(dateStr){
+
+  if(!dateStr) return "-";
+
+  try{
+
+    const match = dateStr.match(/Date\((\d+),(\d+),(\d+)\)/);
+
+    if(!match) return dateStr;
+
+    const tahun = Number(match[1]);
+    const bulan = Number(match[2]);
+    const hari = Number(match[3]);
+
+    const date = new Date(tahun, bulan, hari);
+
+    return date.toLocaleDateString("id-ID",{
+      day:"numeric",
+      month:"long",
+      year:"numeric"
+    });
+
+  }catch{
+    return "-";
+  }
+
+}
+
+// 🔥 STATE DATA
+let SIRUP = [];
+let EKATALOG = [];
+let GAP = [];
+
+let CURRENT_DETAIL = [];
+let SORT_STATE = {};
+
+let ACTIVE_EKATALOG = [];
+let ACTIVE_SIRUP = [];
+let ACTIVE_GAP = [];
+
+let CURRENT_PD = "ALL";
+
+let chart1, chart2, chart3, chart4;
+
+let PAKET_MONITORING = [];
+
+let SORT_PAKET = {
+  key:null,
+  asc:true
+};
+
+async function loadData(){
+
+  const res = await fetch(URL);
+  const text = await res.text();
+
+  const json = JSON.parse(text.substring(47).slice(0,-2));
+  const rows = json.table.rows;
+
+  document.getElementById("lastUpdate").innerText =
+  "Last Update: " +
+  new Date().toLocaleString("id-ID");
+
+  // ================= PARSE =================
+  rows.forEach(r=>{
+
+    // SIRUP (D-F)
+    let pdSirup = r.c[3]?.v;
+    let paket = Number(r.c[4]?.v);
+    let pagu = Number(r.c[5]?.v);
+
+    if(pdSirup && !isNaN(paket)){
+      SIRUP.push({ pd: pdSirup, paket, pagu });
+    }
+
+    // EKATALOG (H-L)
+    let pdEk = r.c[7]?.v;
+    let status = r.c[8]?.v;
+    let realisasi = Number(r.c[9]?.v);
+    let penyedia = r.c[10]?.v;
+    let kd_rup = r.c[11]?.v;
+    let nama_paket = r.c[12]?.v;
+
+    if(pdEk && status){
+      EKATALOG.push({
+        pd: pdEk,
+        status,
+        realisasi,
+        penyedia,
+        kd_rup,
+        nama_paket
+      });
+    }
+
+    // GAP (N-O) 🔥 FIX
+    let pdGap = r.c[14]?.v;
+    let valGap = Number(r.c[15]?.v);
+
+    if(pdGap && !isNaN(valGap)){
+      GAP.push({
+        pd: pdGap,
+        gap: valGap
+      });
+    }
+
+    // ================= MONITORING PAKET =================
+
+    let pd_monitor = r.c[17]?.v;
+    let kode_rup_monitor = r.c[18]?.v;
+    let nama_paket_monitor = r.c[19]?.v;
+    let pagu_monitor = Number(r.c[20]?.v);
+    let realisasi_monitor = Number(r.c[21]?.v);
+    let status_monitor = r.c[22]?.v;
+    let tanggal_monitor = r.c[23]?.v;
+
+    if(kode_rup_monitor){
+
+      PAKET_MONITORING.push({
+        kd_rup: kode_rup_monitor,
+        nama_paket: nama_paket_monitor,
+        pd: pd_monitor,
+        pagu: pagu_monitor || 0,
+        realisasi: realisasi_monitor || 0,
+        status: status_monitor,
+        tanggal_awal_kontrak: tanggal_monitor
+      });
+
+    }
+
+  });
+
+  initDropdown();
+  updateDashboard("ALL");
+}
+
+function initDropdown(){
+
+  let pdSet = new Set();
+
+  SIRUP.forEach(d=>pdSet.add(d.pd));
+  EKATALOG.forEach(d=>pdSet.add(d.pd));
+
+  const select = document.getElementById("filterPD");
+
+  pdSet.forEach(pd=>{
+    let opt = document.createElement("option");
+    opt.value = pd;
+    opt.textContent = pd;
+    select.appendChild(opt);
+  });
+
+  select.onchange = function(){
+    updateDashboard(this.value);
+  }
+}
+
+function updateDashboard(pd){
+
+  let sirup = pd==="ALL" ? SIRUP : SIRUP.filter(d=>d.pd===pd);
+  let ekatalog = pd==="ALL" ? EKATALOG : EKATALOG.filter(d=>d.pd===pd);
+  let gap = pd==="ALL" ? GAP : GAP.filter(d=>d.pd===pd);
+
+  // 🔥 SIMPAN STATE AKTIF
+  ACTIVE_EKATALOG = ekatalog;
+  ACTIVE_SIRUP = sirup;
+  ACTIVE_GAP = gap;
+  
+  CURRENT_PD = pd;
+
+  // KPI
+  let paket_sirup = sirup.reduce((a,b)=>a+b.paket,0);
+  let pagu = sirup.reduce((a,b)=>a+b.pagu,0);
+
+  let transaksi = ekatalog.length;
+  let realisasi = ekatalog.reduce((a,b)=>a+b.realisasi,0);
+
+  let onprocess = ekatalog.filter(d=>d.status==="ON_PROCESS").length;
+  let selesai = ekatalog.filter(d=>d.status==="COMPLETED").length;
+
+  let uniqueRup = new Set(ekatalog.map(d=>d.kd_rup));
+  let paket_ekatalog = uniqueRup.size;
+
+  // SET KPI
+  document.getElementById("sirup").innerText = paket_sirup;
+  document.getElementById("ekatalog").innerText = paket_ekatalog;
+  document.getElementById("pagu").innerText = formatRupiah(pagu);
+  document.getElementById("trx").innerText = transaksi;
+  document.getElementById("realisasi").innerText = formatRupiah(realisasi);
+  document.getElementById("onprocess").innerText = onprocess;
+  document.getElementById("selesai").innerText = selesai;
+
+  renderCharts(paket_sirup, paket_ekatalog, selesai, onprocess, ekatalog, gap, pd);
+
+  renderMonitoringPaket();
+}
+
+function renderCharts(paket_sirup, paket_ekatalog, selesai, onprocess, ekatalog, gap, pd){
+
+  if(chart1) chart1.destroy();
+  if(chart2) chart2.destroy();
+  if(chart3) chart3.destroy();
+  if(chart4) chart4.destroy();
+
+  // ================= CHART 1 =================
+  chart1 = new Chart(document.getElementById("progress"),{
+    type:"bar",
+    data:{
+      labels:["SIRUP","E-Katalog"],
+      datasets:[{
+        data:[paket_sirup,paket_ekatalog],
+        backgroundColor:["#3b82f6","#ef4444"]
+      }]
+    },
+    plugins:[ChartDataLabels],
+    options:{
+      indexAxis:'y',
+      plugins:{
+        title:{display:true,text:"Progres ATK",font:{size:20}},
+        legend:{display:false},
+        datalabels:{anchor:'end',align:'right'}
+      }
+    }
+  });
+
+  // ================= CHART 2 =================
+  const total = selesai + onprocess;
+
+  chart2 = new Chart(document.getElementById("status"),{
+    type:"doughnut",
+    data:{
+      labels:["Completed","On Process"],
+      datasets:[{
+        data:[selesai,onprocess],
+        backgroundColor:["#3b82f6","#ef4444"]
+      }]
+    },
+    plugins:[ChartDataLabels],
+    options:{
+      plugins:{
+        title:{display:true,text:"Status ATK",font:{size:20}},
+        datalabels:{
+          color:"#fff",
+          formatter:(v)=>((v/total)*100).toFixed(1)+"%"
+        }
+      }
+    }
+  });
+
+  // ================= CHART 3 =================
+  let map = {};
+
+  ekatalog.forEach(d=>{
+    if(!map[d.penyedia]) map[d.penyedia]={c:0,o:0};
+    if(d.status==="COMPLETED") map[d.penyedia].c++;
+    else map[d.penyedia].o++;
+  });
+
+  let labels = Object.keys(map);
+  let c = labels.map(l=>map[l].c);
+  let o = labels.map(l=>map[l].o);
+
+  chart3 = new Chart(document.getElementById("penyedia"),{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[
+        {label:"Completed",data:c,backgroundColor:"#3b82f6"},
+        {label:"On Process",data:o,backgroundColor:"#ef4444"}
+      ]
+    },
+    plugins:[ChartDataLabels],
+    options:{
+      indexAxis:'y',
+      plugins:{
+        title:{
+          display:true,
+          text:"Status ATK berdasarkan Penyedia",
+          font:{size:20}},
+        datalabels:{anchor:'end',align:'right'}
+      },
+      onClick: (e, elements) => {
+
+      if(elements.length > 0){
+      // klik bar → 1 penyedia
+      let index = elements[0].index;
+      let penyediaKlik = labels[index];
+      showDetailByPenyedia(penyediaKlik, ekatalog);
+
+      } else {
+      // klik kosong → semua penyedia
+      showAllDetail(ekatalog);
+      }
+
+      }
+    }
+  });
+
+  // ================= CHART 4 (TOP GAP FIX) =================
+  let sorted = [...gap]
+    .filter(d => !isNaN(d.gap))
+    .sort((a,b)=>b.gap-a.gap)
+    .slice(0,5);
+
+  let titleText = pd === "ALL"
+    ? "Top 5 Gap Paket ATK (Seluruh Perangkat Daerah)"
+    : `Gap Paket ATK - ${pd}`;
+
+  chart4 = new Chart(document.getElementById("topgap"),{
+    type:"bar",
+    data:{
+      labels:sorted.map(d=>d.pd),
+      datasets:[{
+        data:sorted.map(d=>d.gap),
+        backgroundColor: sorted.map((_,i)=> i<3 ? "#ef4444" : "#f59e0b")
+      }]
+    },
+    plugins:[ChartDataLabels],
+    options:{
+      indexAxis:'y',
+      plugins:{
+        title:{
+          display:true,
+          text:titleText,
+          font:{size:20, weight:'bold'}
+        },
+        legend:{display:false},
+        datalabels:{
+          anchor:'end',
+          align:'right',
+          color:'#000',
+          font:{weight:'bold'}
+        }
+      }
+    }
+  });
+
+}
+
+
+
+// ================= KPI TRANSAKSI ATK =================
+function showAllTransaksi(data){
+
+  const modal = document.getElementById("modal");
+  const title = document.getElementById("modalTitle");
+
+  title.innerText = CURRENT_PD === "ALL"
+  ? "Semua Transaksi ATK"
+  : "Transaksi ATK - " + CURRENT_PD;
+
+  CURRENT_DETAIL = data;
+
+  renderTable(CURRENT_DETAIL);
+
+  modal.style.display = "block";
+}
+
+
+
+
+// ================= STATUS TRANSAKSI =================
+function showByStatus(status, data){
+
+  const modal = document.getElementById("modal");
+  const title = document.getElementById("modalTitle");
+
+  title.innerText = "Status: " + status;
+
+  CURRENT_DETAIL = data.filter(d => d.status === status);
+
+  renderTable(CURRENT_DETAIL);
+
+  modal.style.display = "block";
+}
+
+
+
+// ================= MODAL =================
+function showDetailByPenyedia(penyedia, data){
+
+  const modal = document.getElementById("modal");
+  const body = document.getElementById("modalBody");
+  const title = document.getElementById("modalTitle");
+
+  title.innerText = "Detail Penyedia: " + penyedia;
+
+  CURRENT_DETAIL = data.filter(d => d.penyedia === penyedia);
+
+  renderTable(CURRENT_DETAIL);
+
+  modal.style.display = "block";
+}
+
+function showAllDetail(data){
+
+  const modal = document.getElementById("modal");
+  const title = document.getElementById("modalTitle");
+
+  title.innerText = "Semua Penyedia";
+
+  CURRENT_DETAIL = data;
+
+  renderTable(CURRENT_DETAIL);
+
+  modal.style.display = "block";
+}
+
+
+// ================= RENDER TABLE =================
+function renderTable(data){
+
+  const body = document.getElementById("modalBody");
+
+  body.innerHTML = data.map(d=>{
+
+    let bg = d.status === "ON_PROCESS"
+      ? "background:#fef9c3;"
+      : "";
+
+    return `
+      <tr style="${bg}">
+        <td>${d.pd}</td>
+        <td>${d.kd_rup}</td>
+        <td>${d.nama_paket}</td>
+        <td>${d.penyedia}</td>
+        <td>${d.status}</td>
+        <td>${formatRupiah(d.realisasi)}</td>
+      </tr>
+    `;
+  }).join("");
+  }
+
+
+// ================= SEARCH =================
+document.addEventListener("input", function(e){
+
+  if(e.target.id === "searchInput"){
+
+    let keyword = e.target.value.toLowerCase();
+
+    let filtered = CURRENT_DETAIL.filter(d =>
+      d.pd.toLowerCase().includes(keyword) ||
+      d.nama_paket.toLowerCase().includes(keyword) ||
+      d.penyedia.toLowerCase().includes(keyword)
+    );
+
+    renderTable(filtered);
+  }
+
+});
+
+
+// ================= SORT =================
+function sortTable(key){
+
+  SORT_STATE[key] = !SORT_STATE[key];
+
+  CURRENT_DETAIL.sort((a,b)=>{
+
+    let valA = a[key];
+    let valB = b[key];
+
+    // angka
+    if(typeof valA === "number"){
+      return SORT_STATE[key] ? valA - valB : valB - valA;
+    }
+
+    // string
+    return SORT_STATE[key]
+      ? valA.localeCompare(valB)
+      : valB.localeCompare(valA);
+  });
+
+  renderTable(CURRENT_DETAIL);
+}
+
+
+// ================= CLOSE MODAL =================
+function closeModal(){
+  document.getElementById("modal").style.display = "none";
+}
+
+
+window.onclick = function(e){
+  const modal = document.getElementById("modal");
+  const content = document.getElementById("modalContent");
+
+  if(e.target === modal){
+    closeModal();
+  }
+}
+
+
+function renderMonitoringPaket(){
+
+  const body = document.getElementById("paketBody");
+  const summary = document.getElementById("summaryPaket");
+
+  const filterStatus = document.getElementById("filterStatusPaket").value;
+  const search = document.getElementById("searchPaket").value.toLowerCase();
+
+  let data = CURRENT_PD === "ALL"
+    ? PAKET_MONITORING
+    : PAKET_MONITORING.filter(d=>d.pd === CURRENT_PD);
+
+  // FILTER STATUS
+  if(filterStatus === "BELUM"){
+    data = data.filter(d=>d.status === "Belum Bertransaksi");
+  }
+
+  if(filterStatus === "SUDAH"){
+    data = data.filter(d=>d.status === "Sudah Bertransaksi");
+  }
+
+  // SEARCH
+  data = data.filter(d=>
+
+    d.nama_paket?.toLowerCase().includes(search) ||
+    d.pd?.toLowerCase().includes(search) ||
+    String(d.kd_rup).includes(search)
+
+  );
+
+  // SORT
+  if(SORT_PAKET.key){
+
+    data.sort((a,b)=>{
+
+      let valA = a[SORT_PAKET.key];
+      let valB = b[SORT_PAKET.key];
+
+      // NUMBER
+      if(typeof valA === "number"){
+
+        return SORT_PAKET.asc
+          ? valA - valB
+          : valB - valA;
+
+      }
+
+      // STRING
+      valA = String(valA).toLowerCase();
+      valB = String(valB).toLowerCase();
+
+      return SORT_PAKET.asc
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+
+    });
+
+  }
+
+  // SUMMARY
+  let totalBelum = data.filter(
+    d=>d.status==="Belum Bertransaksi"
+  ).length;
+
+  let totalSudah = data.filter(
+    d=>d.status==="Sudah Bertransaksi"
+  ).length;
+
+  let totalPaguBelum = data
+    .filter(d=>d.status==="Belum Bertransaksi")
+    .reduce((a,b)=>a+b.pagu,0);
+
+  let totalPaguSudah = data
+    .filter(d=>d.status==="Sudah Bertransaksi")
+    .reduce((a,b)=>a+b.realisasi,0);
+
+  summary.innerHTML = `
+    🔥 <b>${totalBelum}</b> paket belum bertransaksi
+    &nbsp;&nbsp;&nbsp;
+
+    💰 <b>${formatRupiah(totalPaguBelum)}</b> belum berjalan
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+    ✅ <b>${totalSudah}</b> paket sudah bertransaksi
+    &nbsp;&nbsp;&nbsp;
+
+    💸 <b>${formatRupiah(totalPaguSudah)}</b> sudah terealisasi
+  `;
+
+  body.innerHTML = data.map(d=>{
+
+    let rowClass =
+      d.status === "Belum Bertransaksi"
+      ? "row-belum"
+      : "row-sudah";
+
+    let badgeClass =
+      d.status === "Belum Bertransaksi"
+      ? "status-belum"
+      : "status-sudah";
+
+    return `
+  <tr class="${rowClass}">
+
+    <td>${d.kd_rup}</td>
+
+    <td>${d.pd}</td>
+
+    <td>${d.nama_paket}</td>
+
+    <td>${formatRupiah(d.pagu)}</td>
+
+    <td>${formatRupiah(d.realisasi)}</td>
+
+    <td>
+      <span class="status-badge ${badgeClass}">
+        ${d.status}
+      </span>
+    </td>
+
+    <td>${formatTanggalGoogle(d.tanggal_awal_kontrak)}</td>
+
+  </tr>
+`;
+
+  }).join("");
+
+}
+
+
+function sortMonitoring(key){
+
+  if(SORT_PAKET.key === key){
+
+    SORT_PAKET.asc = !SORT_PAKET.asc;
+
+  }else{
+
+    SORT_PAKET.key = key;
+    SORT_PAKET.asc = true;
+
+  }
+
+  renderMonitoringPaket();
+
+}
+
+
+document.getElementById("filterStatusPaket")
+  .addEventListener("change", renderMonitoringPaket);
+
+document.getElementById("searchPaket")
+  .addEventListener("input", renderMonitoringPaket);
+
+loadData();
+
+</script>
+
+<div style="text-align:right; font-size:12px; color:#6b7280; margin-bottom:10px; margin-right: 20px;">
+  Last Update: <span id="lastUpdate"></span>
+</div>
+
+
+<div id="modal" style="
+display:none;
+position:fixed;
+top:0; left:0;
+width:100%; height:100%;
+background:rgba(0,0,0,0.5);
+">
+
+  <div id="modalContent">
+
+  <div class="modal-header">
+    <h3 id="modalTitle"></h3>
+    <span onclick="closeModal()" class="close-btn">✕</span>
+  </div>
+
+  <div class="modal-body">
+
+    <div style="margin-bottom:10px;">
+      <input 
+      type="text" 
+      id="searchInput"
+      placeholder="Cari paket / penyedia / PD..."
+      style="
+        width:100%;
+        padding:8px 10px;
+        border:1px solid #e5e7eb;
+        border-radius:8px;
+        outline:none;
+      "
+      >
+    </div>
+
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th onclick="sortTable('pd')">Perangkat Daerah</th>
+          <th onclick="sortTable('kd_rup')">Kode RUP</th>
+          <th onclick="sortTable('nama_paket')">Nama Paket</th>
+          <th onclick="sortTable('penyedia')">Penyedia</th>
+          <th onclick="sortTable('status')">Status</th>
+          <th onclick="sortTable('realisasi')">Realisasi</th>
+        </tr>
+      </thead>
+      <tbody id="modalBody"></tbody>
+    </table>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>
