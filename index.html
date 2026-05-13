@@ -5,6 +5,7 @@
 <title>Monitoring ATK Kota Bogor</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
 <style>
@@ -276,6 +277,45 @@ tr:hover {
   background:#f0fdf4;
 }
 
+.export-btn{
+  background:#2563eb;
+  color:white;
+  border:none;
+  padding:10px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  transition:.2s;
+}
+
+.export-btn:hover{
+  background:#1d4ed8;
+}
+
+
+/* ================= PAGINATION ================= */
+.pagination-wrapper{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:15px;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.pagination-btn{
+  padding:6px 12px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  background:#e5e7eb;
+}
+
+.pagination-btn.active{
+  background:#2563eb;
+  color:white;
+}
+
 
 .close-btn {
   font-size: 20px;
@@ -340,9 +380,9 @@ tr:hover {
     <div class="monitoring-paket-tools">
 
       <select id="filterStatusPaket" class="monitoring-select">
-        <option value="BELUM">Belum Bertransaksi</option>
+        <option value="ALL" selected>Semua Status</option>
         <option value="SUDAH">Sudah Bertransaksi</option>
-        <option value="ALL">Semua Status</option>
+        <option value="BELUM">Belum Bertransaksi</option>
       </select>
 
       <input
@@ -351,6 +391,10 @@ tr:hover {
         class="monitoring-search"
         placeholder="Cari paket / PD..."
       >
+
+      <button class="export-btn" onclick="exportMonitoringExcel()">
+      Export Excel
+      </button>
 
     </div>
 
@@ -386,6 +430,21 @@ tr:hover {
 
     </table>
 
+    <div class="pagination-wrapper">
+
+      <div>
+        <select id="pageSizeMonitoring" class="monitoring-select">
+          <option value="10">10</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="ALL">Semua</option>
+        </select>
+      </div>
+
+      <div id="paginationMonitoring"></div>
+
+    </div>
+
   </div>
 
 </div>
@@ -394,7 +453,7 @@ tr:hover {
 
 <script>
 
-const URL = "https://docs.google.com/spreadsheets/d/1uy1p8KnlvR6Cu3-iIBlLCzw5M2MiwXKwnmTwQw-hGEk/gviz/tq?tqx=out:json&gid=623389342";
+const API_URL = "https://docs.google.com/spreadsheets/d/1uy1p8KnlvR6Cu3-iIBlLCzw5M2MiwXKwnmTwQw-hGEk/gviz/tq?tqx=out:json&gid=623389342";
 
 function formatRupiah(n){
   return "Rp" + Number(n).toLocaleString("id-ID");
@@ -451,9 +510,16 @@ let SORT_PAKET = {
   asc:true
 };
 
+let PAGE_MONITORING = 1;
+let PAGE_SIZE_MONITORING = 10;
+
+let PAGE_MODAL = 1;
+let PAGE_SIZE_MODAL = 10;
+
+
 async function loadData(){
 
-  const res = await fetch(URL);
+  const res = await fetch(API_URL);
   const text = await res.text();
 
   const json = JSON.parse(text.substring(47).slice(0,-2));
@@ -592,6 +658,8 @@ function updateDashboard(pd){
   document.getElementById("selesai").innerText = selesai;
 
   renderCharts(paket_sirup, paket_ekatalog, selesai, onprocess, ekatalog, gap, pd);
+
+  PAGE_MONITORING = 1;
 
   renderMonitoringPaket();
 }
@@ -752,6 +820,8 @@ function showAllTransaksi(data){
 
   CURRENT_DETAIL = data;
 
+  PAGE_MODAL = 1;
+
   renderTable(CURRENT_DETAIL);
 
   modal.style.display = "block";
@@ -769,6 +839,8 @@ function showByStatus(status, data){
   title.innerText = "Status: " + status;
 
   CURRENT_DETAIL = data.filter(d => d.status === status);
+
+  PAGE_MODAL = 1;
 
   renderTable(CURRENT_DETAIL);
 
@@ -788,6 +860,8 @@ function showDetailByPenyedia(penyedia, data){
 
   CURRENT_DETAIL = data.filter(d => d.penyedia === penyedia);
 
+  PAGE_MODAL = 1;
+
   renderTable(CURRENT_DETAIL);
 
   modal.style.display = "block";
@@ -802,6 +876,8 @@ function showAllDetail(data){
 
   CURRENT_DETAIL = data;
 
+  PAGE_MODAL = 1;
+
   renderTable(CURRENT_DETAIL);
 
   modal.style.display = "block";
@@ -811,11 +887,31 @@ function showAllDetail(data){
 // ================= RENDER TABLE =================
 function renderTable(data){
 
-  const body = document.getElementById("modalBody");
+  const body =
+    document.getElementById("modalBody");
 
-  body.innerHTML = data.map(d=>{
+  let totalData = data.length;
 
-    let bg = d.status === "ON_PROCESS"
+  let start = 0;
+  let end = totalData;
+
+  if(PAGE_SIZE_MODAL !== "ALL"){
+
+    start =
+      (PAGE_MODAL - 1)
+      * PAGE_SIZE_MODAL;
+
+    end =
+      start + Number(PAGE_SIZE_MODAL);
+
+  }
+
+  let paginatedData = data.slice(start,end);
+
+  body.innerHTML = paginatedData.map(d=>{
+
+    let bg =
+      d.status === "ON_PROCESS"
       ? "background:#fef9c3;"
       : "";
 
@@ -829,8 +925,49 @@ function renderTable(data){
         <td>${formatRupiah(d.realisasi)}</td>
       </tr>
     `;
+
   }).join("");
+
+  // ================= PAGINATION =================
+
+  const totalPage =
+    PAGE_SIZE_MODAL === "ALL"
+    ? 1
+    : Math.ceil(totalData / PAGE_SIZE_MODAL);
+
+  if(PAGE_MODAL > totalPage){
+    PAGE_MODAL = totalPage || 1;
   }
+
+  const pagination =
+    document.getElementById("paginationModal");
+
+  pagination.innerHTML = "";
+
+  let maxPage = 5;
+
+  let startPage =
+    Math.max(1, PAGE_MODAL - 2);
+
+  let endPage =
+    Math.min(totalPage, startPage + maxPage - 1);
+
+  for(let i=startPage;i<=endPage;i++){
+
+    pagination.innerHTML += `
+      <button
+        class="pagination-btn ${
+          i===PAGE_MODAL ? "active" : ""
+        }"
+        onclick="goToPageModal(${i})"
+      >
+        ${i}
+      </button>
+    `;
+
+  }
+
+}
 
 
 // ================= SEARCH =================
@@ -982,7 +1119,29 @@ function renderMonitoringPaket(){
     💸 <b>${formatRupiah(totalPaguSudah)}</b> sudah terealisasi
   `;
 
-  body.innerHTML = data.map(d=>{
+  // ================= PAGINATION =================
+
+  let totalData = data.length;
+
+  let start = 0;
+  let end = totalData;
+
+  if(PAGE_SIZE_MONITORING !== "ALL"){
+
+    start =
+      (PAGE_MONITORING - 1)
+      * PAGE_SIZE_MONITORING;
+
+    end =
+      start + Number(PAGE_SIZE_MONITORING);
+
+  }
+
+  let paginatedData = data.slice(start,end);
+
+  // ================= TABLE =================
+
+  body.innerHTML = paginatedData.map(d=>{
 
     let rowClass =
       d.status === "Belum Bertransaksi"
@@ -995,30 +1154,72 @@ function renderMonitoringPaket(){
       : "status-sudah";
 
     return `
-  <tr class="${rowClass}">
+      <tr class="${rowClass}">
 
-    <td>${d.kd_rup}</td>
+        <td>${d.kd_rup}</td>
 
-    <td>${d.pd}</td>
+        <td>${d.pd}</td>
 
-    <td>${d.nama_paket}</td>
+        <td>${d.nama_paket}</td>
 
-    <td>${formatRupiah(d.pagu)}</td>
+        <td>${formatRupiah(d.pagu)}</td>
 
-    <td>${formatRupiah(d.realisasi)}</td>
+        <td>${formatRupiah(d.realisasi)}</td>
 
-    <td>
-      <span class="status-badge ${badgeClass}">
-        ${d.status}
-      </span>
-    </td>
+        <td>
+          <span class="status-badge ${badgeClass}">
+            ${d.status}
+          </span>
+        </td>
 
-    <td>${formatTanggalGoogle(d.tanggal_awal_kontrak)}</td>
+        <td>${formatTanggalGoogle(d.tanggal_awal_kontrak)}</td>
 
-  </tr>
-`;
-
+      </tr>
+    `;
   }).join("");
+
+  // ================= RENDER PAGINATION =================
+
+  const totalPage =
+    PAGE_SIZE_MONITORING === "ALL"
+    ? 1
+    : Math.ceil(totalData / PAGE_SIZE_MONITORING);
+
+    if(PAGE_MONITORING > totalPage){
+    PAGE_MONITORING = totalPage || 1;
+    }
+
+  const pagination =
+    document.getElementById("paginationMonitoring");
+
+  pagination.innerHTML = "";
+
+  let maxPage = 5;
+
+  let startPage = Math.max(
+    1,
+    PAGE_MONITORING - 2
+  );
+
+  let endPage = Math.min(
+    totalPage,
+    startPage + maxPage - 1
+  );
+
+  for(let i=startPage;i<=endPage;i++)
+  {
+
+    pagination.innerHTML += `
+      <button
+        class="pagination-btn ${
+          i===PAGE_MONITORING ? "active" : ""
+        }"
+        onclick="goToPageMonitoring(${i})"
+      >
+        ${i}
+      </button>
+    `;
+  }
 
 }
 
@@ -1035,17 +1236,232 @@ function sortMonitoring(key){
     SORT_PAKET.asc = true;
 
   }
+  
+  PAGE_MONITORING = 1;
 
   renderMonitoringPaket();
 
 }
 
 
+function exportMonitoringExcel(){
+
+  const filterStatus =
+    document.getElementById("filterStatusPaket").value;
+
+  const search =
+    document.getElementById("searchPaket")
+    .value
+    .toLowerCase();
+
+  let data = CURRENT_PD === "ALL"
+    ? PAKET_MONITORING
+    : PAKET_MONITORING.filter(
+        d=>d.pd === CURRENT_PD
+      );
+
+  // FILTER STATUS
+  if(filterStatus === "BELUM"){
+    data = data.filter(
+      d=>d.status === "Belum Bertransaksi"
+    );
+  }
+
+  if(filterStatus === "SUDAH"){
+    data = data.filter(
+      d=>d.status === "Sudah Bertransaksi"
+    );
+  }
+
+  // SEARCH
+  data = data.filter(d=>
+
+    d.nama_paket?.toLowerCase().includes(search) ||
+    d.pd?.toLowerCase().includes(search) ||
+    String(d.kd_rup).includes(search)
+
+  );
+
+  // FORMAT
+  const exportData = data.map(d=>({
+
+    "Kode RUP": d.kd_rup,
+    "Perangkat Daerah": d.pd,
+    "Nama Paket": d.nama_paket,
+    "Pagu": d.pagu,
+    "Realisasi": d.realisasi,
+    "Status": d.status,
+    "Rencana Tanggal Kontrak":
+      formatTanggalGoogle(d.tanggal_awal_kontrak)
+
+  }));
+
+  // XLSX
+  const ws = XLSX.utils.json_to_sheet(exportData);
+
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    "Monitoring Paket"
+  );
+
+  let namaPD =
+    CURRENT_PD === "ALL"
+    ? "Pemkot_Bogor"
+    : CURRENT_PD.replaceAll(" ","_");
+
+  let fileName =
+    `Monitoring_Paket_${namaPD}.xlsx`;
+
+  // 🔥 FALLBACK SAVE
+  const wbout = XLSX.write(wb, {
+    bookType:'xlsx',
+    type:'array'
+  });
+
+  const blob = new Blob(
+    [wbout],
+    {type:"application/octet-stream"}
+  );
+
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+
+  link.download = fileName;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+}
+
+
+function exportModalExcel(){
+
+  const exportData = CURRENT_DETAIL.map(d=>({
+
+    "Perangkat Daerah": d.pd,
+
+    "Kode RUP": d.kd_rup,
+
+    "Nama Paket": d.nama_paket,
+
+    "Penyedia": d.penyedia,
+
+    "Status": d.status,
+
+    "Realisasi": d.realisasi
+
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(exportData);
+
+  // AUTO WIDTH
+  ws["!cols"] = [
+    {wch:40},
+    {wch:18},
+    {wch:60},
+    {wch:25},
+    {wch:18},
+    {wch:20}
+  ];
+
+  const wb = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    "Detail Penyedia"
+  );
+
+  // NAMA FILE
+  let title =
+    document.getElementById("modalTitle")
+    .innerText
+    .replaceAll(" ","_");
+
+  let fileName =
+    `${title}.xlsx`;
+
+  // DOWNLOAD
+  const wbout = XLSX.write(wb,{
+    bookType:'xlsx',
+    type:'array'
+  });
+
+  const blob = new Blob(
+    [wbout],
+    {type:"application/octet-stream"}
+  );
+
+  const link = document.createElement("a");
+
+  link.href = window.URL.createObjectURL(blob);
+
+  link.download = fileName;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+}
+
+
+function goToPageMonitoring(page){
+
+  PAGE_MONITORING = page;
+
+  renderMonitoringPaket();
+
+}
+
+function goToPageModal(page){
+
+  PAGE_MODAL = page;
+
+  renderTable(CURRENT_DETAIL);
+
+}
+
+document
+  .getElementById("pageSizeMonitoring")
+  .addEventListener("change",function(){
+
+    PAGE_SIZE_MONITORING =
+      this.value === "ALL"
+      ? "ALL"
+      : Number(this.value);
+
+    PAGE_MONITORING = 1;
+
+    renderMonitoringPaket();
+
+});
+
+
+
 document.getElementById("filterStatusPaket")
-  .addEventListener("change", renderMonitoringPaket);
+  .addEventListener("change", ()=>{
+
+    PAGE_MONITORING = 1;
+
+    renderMonitoringPaket();
+
+});
 
 document.getElementById("searchPaket")
-  .addEventListener("input", renderMonitoringPaket);
+  .addEventListener("input", ()=>{
+
+    PAGE_MONITORING = 1;
+
+    renderMonitoringPaket();
+
+});
 
 loadData();
 
@@ -1062,13 +1478,19 @@ position:fixed;
 top:0; left:0;
 width:100%; height:100%;
 background:rgba(0,0,0,0.5);
+z-index:99999;
 ">
 
   <div id="modalContent">
 
   <div class="modal-header">
     <h3 id="modalTitle"></h3>
+    <div style="display:flex; gap:10px; align-items:center;">
+    <button class="export-btn" onclick="exportModalExcel()">
+      Export Excel
+    </button>
     <span onclick="closeModal()" class="close-btn">✕</span>
+  </div>
   </div>
 
   <div class="modal-body">
@@ -1101,10 +1523,41 @@ background:rgba(0,0,0,0.5);
       </thead>
       <tbody id="modalBody"></tbody>
     </table>
+
+    <div class="pagination-wrapper">
+
+    <div>
+      <select id="pageSizeModal" class="monitoring-select">
+        <option value="10">10</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="ALL">Semua</option>
+      </select>
+    </div>
+
+    <div id="paginationModal"></div>
+
+   </div>
+
   </div>
 
 </div>
 </div>
+
+<script>document
+  .getElementById("pageSizeModal")
+  .addEventListener("change",function(){
+
+    PAGE_SIZE_MODAL =
+      this.value === "ALL"
+      ? "ALL"
+      : Number(this.value);
+
+    PAGE_MODAL = 1;
+
+    renderTable(CURRENT_DETAIL);
+
+});</script>
 
 </body>
 </html>
